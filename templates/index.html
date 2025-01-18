@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>俊杰</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3f51b5;
+            --primary-hover: #303f9f;
+            --text-color: #37474f;
+            --bg-color: #f5f7fa;
+            --border-color: #e1e7ef;
+            --shadow-color: rgba(63, 81, 181, 0.08);
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --radius-sm: 6px;
+        }
+
+        body {
+            background: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+            color: var(--text-color);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 20px var(--shadow-color);
+        }
+
+        h1 {
+            margin: 0 0 30px;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--primary-color);
+            padding: 10px;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            gap: 12px;
+            margin: 30px auto;
+            max-width: 800px;
+            background: white;
+            padding: 6px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 18px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            transition: all 0.2s;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.1);
+            background: white;
+        }
+
+        button {
+            padding: 14px 28px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        button:disabled {
+            background: #c5cae9;
+            cursor: not-allowed;
+        }
+
+        .video-wrapper {
+            max-width: 1000px;
+            margin: 30px auto;
+            background: #000;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%;
+        }
+
+        .video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+
+        .message {
+            margin: 20px auto;
+            padding: 15px 25px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 800px;
+            animation: fadeInUp 0.2s ease;
+        }
+
+        .loading {
+            color: var(--primary-color);
+            background: #e8eaf6;
+            border: 1px solid #c5cae9;
+        }
+
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+        }
+
+        .features {
+            display: flex;
+            gap: 15px;
+            margin: 25px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .feature-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .feature-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: var(--bg-color);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .feature-btn i {
+            font-size: 16px;
+            color: var(--primary-color);
+        }
+
+        .history-list {
+            display: none;
+            max-width: 800px;
+            margin: 25px auto;
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            padding: 20px;
+            animation: slideDown 0.2s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            background: var(--bg-color);
+        }
+
+        .item-title {
+            flex: 1;
+            margin-right: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .item-actions button {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 6px;
+            transition: all 0.2s;
+            font-size: 16px;
+            border-radius: var(--radius-sm);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .item-actions button:hover {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .retry-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            margin-top: 12px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
+            background: var(--primary-color);
+        }
+
+        #currentLine {
+            font-size: 13px;
+            color: var(--primary-color);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                width: 100%;
+                padding: 20px;
+            }
+            .input-group {
+                flex-direction: column;
+                padding: 12px;
+            }
+            input[type="text"] {
+                width: 100%;
+            }
+            .video-wrapper {
+                margin: 20px auto;
+            }
+            .feature-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            .history-list {
+                margin: 20px auto;
+                padding: 15px;
+            }
+            .message {
+                margin: 15px auto;
+                padding: 12px 20px;
+            }
+            h1 {
+                font-size: 24px;
+                margin-bottom: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>俊杰的网站</h1>
+
+        <div class="input-group">
+            <input type="text" id="videoUrl" placeholder="请输入视频链接（支持爱奇艺、腾讯视频等主流视频网站）">
+            <button id="parseBtn" onclick="parseVideo()">
+                <i class="fas fa-play-circle"></i>开始解析
+            </button>
+        </div>
+        
+        <div class="features">
+            <button class="feature-btn" onclick="toggleHistory()">
+                <i class="fas fa-history"></i>历史记录
+            </button>
+            <button class="feature-btn" onclick="clearHistory()">
+                <i class="fas fa-trash-alt"></i>清空历史
+            </button>
+        </div>
+
+        <div id="history-list" class="history-list"></div>
+        
+        <div id="loading" class="message loading">
+            <span>正在解析中，请稍候...</span>
+            <div id="currentLine"></div>
+        </div>
+        <div id="error" class="message error"></div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let player = null;
+        let currentApiIndex = 0;
+        const maxRetries = 3;
+        let retryCount = 0;
+        
+        function parseVideo(index = 0) {
+            const url = document.getElementById('videoUrl').value;
+            const parseBtn = document.getElementById('parseBtn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const result = document.getElementById('result');
+            const currentLine = document.getElementById('currentLine');
+
+            if (!url) {
+                showError('请输入视频URL');
+                return;
+            }
+
+            parseBtn.disabled = true;
+            loading.style.display = 'flex';
+            error.style.display = 'none';
+            result.innerHTML = '';
+            currentLine.textContent = `正在使用线路${index + 1}解析...`;
+
+            fetch('/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `url=${encodeURIComponent(url)}&api_index=${index}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    result.innerHTML = `
+                        <div class="video-wrapper">
+                            <div class="video-container">
+                                <iframe 
+                                    id="videoPlayer"
+                                    src="${data.data.url}" 
+                                    allowfullscreen="true"
+                                    webkitallowfullscreen="true" 
+                                    mozallowfullscreen="true"
+                                    allow="fullscreen; autoplay"
+                                    sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+                                    scrolling="no"
+                                    frameborder="0"
+                                ></iframe>
+                            </div>
+                        </div>
+                    `;
+                    player = document.getElementById('videoPlayer');
+                    retryCount = 0;
+                } else {
+                    if (index < 3) {
+                        retryCount++;
+                        showError(`线路${index + 1}解析失败，正在切换到下一条线路...`);
+                        setTimeout(() => parseVideo(index + 1), 1000);
+                    } else {
+                        showError('解析失败，请检查视频链接是否正确', true);
+                    }
+                }
+            })
+            .catch(err => {
+                if (index < 3) {
+                    retryCount++;
+                    showError(`线路${index + 1}解析失败，正在切换到下一条线路...`);
+                    setTimeout(() => parseVideo(index + 1), 1000);
+                } else {
+                    showError('解析失败，请检查网络连接', true);
+                }
+            })
+            .finally(() => {
+                parseBtn.disabled = false;
+                loading.style.display = 'none';
+                currentLine.textContent = '';
+            });
+        }
+
+        function showError(message, isFinal = false) {
+            const error = document.getElementById('error');
+            error.innerHTML = `
+                <div>${message}</div>
+                ${isFinal ? `
+                    <button class="retry-btn" onclick="retryParse()">
+                        <i class="fas fa-sync-alt"></i>重新解析
+                    </button>
+                ` : ''}
+            `;
+            error.style.display = 'flex';
+        }
+
+        function retryParse() {
+            retryCount = 0;
+            parseVideo(0);
+        }
+
+        function saveToHistory(url, title = '') {
+            let history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+            history.unshift({ 
+                url, 
+                title, 
+                timestamp: Date.now()
+            });
+            history = history.slice(0, 10);
+            localStorage.setItem('videoHistory', JSON.stringify(history));
+            updateHistoryList();
+        }
+
+        function toggleHistory() {
+            const historyList = document.getElementById('history-list');
+            historyList.style.display = historyList.style.display === 'none' ? 'block' : 'none';
+            updateHistoryList();
+        }
+
+        function updateHistoryList() {
+            const historyList = document.getElementById('history-list');
+            const history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+            
+            historyList.innerHTML = history.map((item, index) => `
+                <div class="history-item">
+                    <span class="item-title">${item.title || item.url}</span>
+                    <div class="item-actions">
+                        <button onclick="parseHistoryItem(${index})" title="重新解析">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button onclick="removeFromHistory(${index})" title="删除记录">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeFromHistory(index) {
+            let history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+            history.splice(index, 1);
+            localStorage.setItem('videoHistory', JSON.stringify(history));
+            updateHistoryList();
+        }
+
+        function clearHistory() {
+            if (confirm('确定要清空历史记录吗？')) {
+                localStorage.removeItem('videoHistory');
+                updateHistoryList();
+            }
+        }
+
+        function parseHistoryItem(index) {
+            const history = JSON.parse(localStorage.getItem('videoHistory') || '[]');
+            if (history[index]) {
+                document.getElementById('videoUrl').value = history[index].url;
+                retryParse();
+            }
+        }
+
+        document.getElementById('videoUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                retryParse();
+            }
+        });
+
+        const originalParseVideo = parseVideo;
+        parseVideo = function(index = 0) {
+            const url = document.getElementById('videoUrl').value;
+            if (url) {
+                if (index === 0) {
+                    saveToHistory(url);
+                }
+                originalParseVideo(index);
+            }
+        };
+    </script>
+</body>
+</html> 
