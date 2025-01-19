@@ -17,13 +17,20 @@ logger.addHandler(handler)
 
 # 解析接口列表
 PARSE_APIS = [
-    'https://jx.m3u8.tv/jiexi/?url=',  # 默认线路 - 稳定高清
-    'https://www.8090g.cn/?url=',  # 备用线路1 - 无广告
-    'https://jx.playerjy.com/?url=',  # 备用线路2 - 超清解析
-    'https://jx.jsonplayer.com/player/?url=',  # 备用线路3 - 全网解析
-    'https://jx.xmflv.com/?url=',  # 备用线路4 - 超清解析
-    'https://api.jiexi.la/?url='  # 备用线路5 - 稳定高速
+    'https://jx.jsonplayer.com/player/?url=',  # 默认线路 - 全网解析
+    'https://jx.xmflv.com/?url=',  # 备用线路1 - 超清解析
+    'https://jx.m3u8.tv/jiexi/?url=',  # 备用线路2 - 稳定高清
+    'https://www.8090g.cn/?url=',  # 备用线路3 - 无广告
+    'https://jx.bozrc.com:4433/player/?url=',  # 备用线路4 - 备用高清
+    'https://www.ckmov.vip/api.php?url='  # 备用线路5 - 超清接口
 ]
+
+# 请求头
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Referer': 'https://www.8090g.cn/',
+    'Origin': 'https://www.8090g.cn/'
+}
 
 # 支持的视频平台
 SUPPORTED_DOMAINS = [
@@ -86,10 +93,21 @@ def create_app():
                     parse_url = api + url
                     logger.info(f"尝试使用接口: {api}")
                     
+                    # 验证解析接口是否可用
+                    try:
+                        response = requests.head(parse_url, headers=HEADERS, timeout=5, allow_redirects=True)
+                        if response.status_code != 200:
+                            logger.warning(f"接口 {api} 返回状态码: {response.status_code}")
+                            continue
+                    except requests.RequestException as e:
+                        logger.error(f"请求接口 {api} 失败: {str(e)}")
+                        continue
+                    
                     # 返回解析结果
                     response = jsonify({
                         'url': parse_url,
-                        'title': '视频播放'
+                        'title': '视频播放',
+                        'api': api
                     })
                     
                     response.headers.update({
