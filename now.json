@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "name": "video-parser",
+    "builds": [
+        {
+            "src": "*.py",
+            "use": "@now/python"
+        },
+        {
+            "src": "templates/**",
+            "use": "@now/static"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/",
+            "dest": "/templates/index.html"
+        },
+        {
+            "src": "/parse",
+            "methods": ["POST"],
+            "dest": "/index.py"
+        }
+    ]
+} 
