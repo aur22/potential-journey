@@ -112,7 +112,7 @@
     <div class="container">
         <h1>视频解析</h1>
         <div class="input-group">
-            <input type="text" id="videoUrl" placeholder="请输入视频链接">
+            <input type="text" id="videoUrl" placeholder="请输入视频链接（支持 YouTube、哔哩哔哩、抖音、快手）">
         </div>
         <button onclick="parseVideo()">开始解析</button>
         <div id="loading">正在解析中，请稍候...</div>
@@ -174,7 +174,13 @@
                 },
                 body: JSON.stringify({ url: url })
             })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || '解析失败');
+                }
+                return data;
+            })
             .then(data => {
                 loading.style.display = 'none';
                 if (data.url) {
@@ -186,7 +192,7 @@
             })
             .catch(error => {
                 loading.style.display = 'none';
-                alert('网络错误，请稍后重试');
+                alert(error.message || '网络错误，请稍后重试');
                 console.error('Error:', error);
             });
         }

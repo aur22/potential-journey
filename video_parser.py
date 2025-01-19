@@ -6,6 +6,8 @@ import requests
 import logging
 from logging.handlers import RotatingFileHandler
 import time
+import yt_dlp
+import re
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -136,6 +138,17 @@ class VideoParser:
             logger.error(f"URL解析失败: {str(e)}")
             return {'success': False, 'message': '解析过程发生错误，请稍后重试'}
 
+def is_valid_url(url):
+    # 支持的视频平台URL正则表达式
+    patterns = [
+        r'^https?:\/\/(www\.)?(youtube\.com|youtu\.be)',
+        r'^https?:\/\/(www\.)?bilibili\.com',
+        r'^https?:\/\/(www\.)?douyin\.com',
+        r'^https?:\/\/(www\.)?kuaishou\.com'
+    ]
+    
+    return any(re.match(pattern, url) for pattern in patterns)
+
 def create_app():
     """创建Flask应用"""
     app = Flask(__name__)
@@ -165,44 +178,55 @@ def create_app():
         })
         return response
 
-    @app.route('/parse', methods=['POST', 'OPTIONS'])
-    def parse():
-        if request.method == 'OPTIONS':
-            response = make_response()
-            response.headers.update({
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
-            })
-            return response
-
+    @app.route('/parse', methods=['POST'])
+    def parse_video():
         try:
-            url = request.form.get('url', '').strip()
-            api_index = int(request.form.get('api_index', 0))
-
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': '无效的请求数据'}), 400
+                
+            url = data.get('url')
             if not url:
-                return jsonify({'success': False, 'message': '请输入视频URL'})
-
-            if not url.startswith(('http://', 'https://')):
-                url = 'https://' + url
-
-            parser = VideoParser()
-            if api_index >= len(parser.PARSE_APIS):
-                return jsonify({'success': False, 'message': '无效的接口选择'})
-
-            result = parser.parse_url(url, api_index)
-            response = make_response(jsonify(result))
-            response.headers.update({
-                'Cache-Control': Config.CACHE_CONTROL,
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
-            })
-            return response
+                return jsonify({'error': '请提供视频URL'}), 400
             
+            if not is_valid_url(url):
+                return jsonify({'error': '不支持的视频平台或无效的URL'}), 400
+
+            ydl_opts = {
+                'format': 'best',
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': False,
+                'timeout': 30,
+            }
+            
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    if not info:
+                        return jsonify({'error': '无法获取视频信息'}), 400
+                        
+                    # 尝试获取不同格式的URL
+                    video_url = info.get('url')
+                    if not video_url:
+                        formats = info.get('formats', [])
+                        if formats:
+                            # 选择最佳质量的格式
+                            best_format = formats[-1]
+                            video_url = best_format.get('url')
+                    
+                    if not video_url:
+                        return jsonify({'error': '无法获取视频地址'}), 400
+                        
+                    return jsonify({'url': video_url})
+                    
+            except yt_dlp.utils.DownloadError as e:
+                logger.error(f"下载错误: {str(e)}")
+                return jsonify({'error': '视频解析失败，请确认链接是否正确'}), 400
+                
         except Exception as e:
-            logger.error(f"解析请求处理失败: {str(e)}")
-            return jsonify({'success': False, 'message': '服务器处理请求失败，请稍后重试'})
+            logger.error(f"解析错误: {str(e)}")
+            return jsonify({'error': '服务器处理请求失败，请稍后重试'}), 500
 
     @app.errorhandler(404)
     def not_found_error(error):
