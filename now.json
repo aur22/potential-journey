@@ -7,19 +7,25 @@
             "use": "@now/python"
         },
         {
-            "src": "templates/**",
+            "src": "public/**",
             "use": "@now/static"
         }
     ],
     "routes": [
         {
             "src": "/",
-            "dest": "/templates/index.html"
+            "dest": "/public/index.html"
         },
         {
             "src": "/parse",
-            "methods": ["POST"],
+            "methods": ["POST", "OPTIONS"],
             "dest": "/index.py"
         }
-    ]
+    ],
+    "env": {
+        "FLASK_APP": "index.py",
+        "FLASK_ENV": "production",
+        "PORT": "5000",
+        "HOST": "0.0.0.0"
+    }
 } 
