@@ -1,0 +1,18 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "video_parser.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "video_parser.py"
+        }
+    ],
+    "env": {
+        "PYTHONUNBUFFERED": "1"
+    }
+} 
