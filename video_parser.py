@@ -27,7 +27,7 @@ class Config:
     DEBUG = False
     PORT = int(os.environ.get('PORT', 5000))
     HOST = os.environ.get('HOST', '0.0.0.0')
-    CORS_ORIGINS = '*'  # 允许所有来源
+    CORS_ORIGINS = '*'
     CACHE_CONTROL = 'no-cache, no-store, must-revalidate'
 
 class VideoParser:
@@ -151,20 +151,11 @@ def is_valid_url(url):
 
 def create_app():
     """创建Flask应用"""
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='public', static_url_path='')
     app.config.from_object(Config)
     
     # 配置CORS
-    CORS(app, resources={
-        r"/*": {
-            "origins": ["*"],
-            "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-            "expose_headers": ["Content-Type"],
-            "supports_credentials": True,
-            "max_age": 600
-        }
-    })
+    CORS(app)
     
     # 注册路由
     @app.route('/')
@@ -174,12 +165,21 @@ def create_app():
             'Cache-Control': Config.CACHE_CONTROL,
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+            'Access-Control-Allow-Headers': 'Content-Type'
         })
         return response
 
-    @app.route('/parse', methods=['POST'])
+    @app.route('/parse', methods=['POST', 'OPTIONS'])
     def parse_video():
+        if request.method == 'OPTIONS':
+            response = make_response()
+            response.headers.update({
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            })
+            return response
+
         try:
             data = request.get_json()
             if not data:
@@ -197,7 +197,10 @@ def create_app():
                 'quiet': True,
                 'no_warnings': True,
                 'extract_flat': False,
-                'timeout': 30,
+                'socket_timeout': 30,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
             }
             
             try:
@@ -218,7 +221,13 @@ def create_app():
                     if not video_url:
                         return jsonify({'error': '无法获取视频地址'}), 400
                         
-                    return jsonify({'url': video_url})
+                    response = jsonify({'url': video_url})
+                    response.headers.update({
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                        'Access-Control-Allow-Headers': 'Content-Type'
+                    })
+                    return response
                     
             except yt_dlp.utils.DownloadError as e:
                 logger.error(f"下载错误: {str(e)}")
@@ -230,11 +239,11 @@ def create_app():
 
     @app.errorhandler(404)
     def not_found_error(error):
-        return jsonify({'success': False, 'message': '请求的资源不存在'}), 404
+        return jsonify({'error': '请求的资源不存在'}), 404
 
     @app.errorhandler(500)
     def internal_error(error):
-        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
+        return jsonify({'error': '服务器内部错误'}), 500
 
     return app
 

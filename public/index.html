@@ -185,7 +185,14 @@
                 loading.style.display = 'none';
                 if (data.url) {
                     videoContainer.style.display = 'block';
-                    videoContainer.innerHTML = `<iframe src="${data.url}" allowfullscreen></iframe>`;
+                    const videoUrl = data.url;
+                    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                        // YouTube视频使用iframe
+                        videoContainer.innerHTML = `<iframe src="${videoUrl}" allowfullscreen></iframe>`;
+                    } else {
+                        // 其他视频使用video标签
+                        videoContainer.innerHTML = `<video src="${videoUrl}" controls style="width:100%; max-height:500px;"></video>`;
+                    }
                 } else {
                     alert(data.error || '解析失败，请稍后重试');
                 }
