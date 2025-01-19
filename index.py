@@ -1,23 +1,33 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import yt_dlp
+import requests
 import re
 import os
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 CORS(app)
 
+# 解析接口列表
+PARSE_APIS = [
+    "https://jx.jsonplayer.com/player/?url=",  # 默认线路
+    "https://jx.xmflv.com/?url=",              # 备用线路1
+    "https://jx.aidouer.net/?url=",            # 备用线路2
+    "https://jx.playerjy.com/?url=",           # 备用线路3
+    "https://jx.quankan.app/?url=",            # 备用线路4
+]
+
 # 支持的视频平台
-SUPPORTED_PLATFORMS = [
-    r'^https?:\/\/(www\.)?(youtube\.com|youtu\.be)',
-    r'^https?:\/\/(www\.)?bilibili\.com',
-    r'^https?:\/\/(www\.)?douyin\.com',
-    r'^https?:\/\/(www\.)?kuaishou\.com'
+SUPPORTED_DOMAINS = [
+    'v.qq.com', 'iqiyi.com', 'youku.com', 'mgtv.com', 'bilibili.com',
+    'sohu.com', 'le.com', 'pptv.com', '1905.com', 'fun.tv', 'douyin.com'
 ]
 
 def is_valid_url(url):
-    """检查URL是否为支持的视频平台"""
-    return any(re.match(pattern, url) for pattern in SUPPORTED_PLATFORMS)
+    """检查URL是否为支持的视频网站"""
+    try:
+        return any(domain in url.lower() for domain in SUPPORTED_DOMAINS)
+    except:
+        return False
 
 @app.route('/')
 def index():
@@ -49,45 +59,15 @@ def parse():
         if not is_valid_url(url):
             return jsonify({'error': '不支持的视频平台或无效的URL'}), 400
 
-        # yt-dlp配置
-        ydl_opts = {
-            'format': 'best[ext=mp4]/best',  # 优先mp4格式
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': False,
-            'socket_timeout': 30,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-        }
-
-        # 解析视频
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        # 尝试所有解析接口
+        for api in PARSE_APIS:
             try:
-                info = ydl.extract_info(url, download=False)
-                if not info:
-                    return jsonify({'error': '无法获取视频信息'}), 400
-
-                # 获取视频URL
-                video_url = info.get('url')
-                if not video_url:
-                    formats = info.get('formats', [])
-                    if formats:
-                        # 选择最佳格式
-                        best_format = formats[-1]
-                        video_url = best_format.get('url')
-
-                if not video_url:
-                    return jsonify({'error': '无法获取视频地址'}), 400
-
-                # 返回结果
+                parse_url = api + url
                 response = jsonify({
-                    'url': video_url,
-                    'title': info.get('title', '未知标题'),
-                    'platform': 'youtube' if ('youtube.com' in url or 'youtu.be' in url) else 'other'
+                    'url': parse_url,
+                    'title': '视频播放',
+                    'platform': 'other'
                 })
-
-                # 设置响应头
                 response.headers.update({
                     'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -95,9 +75,10 @@ def parse():
                     'Cache-Control': 'no-cache'
                 })
                 return response
+            except:
+                continue
 
-            except yt_dlp.utils.DownloadError as e:
-                return jsonify({'error': '视频解析失败，请确认链接是否正确'}), 400
+        return jsonify({'error': '解析失败，请稍后重试'}), 400
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
