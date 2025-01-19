@@ -5,6 +5,7 @@ from functools import lru_cache
 import requests
 import logging
 from logging.handlers import RotatingFileHandler
+import time
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -33,15 +34,23 @@ class VideoParser:
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Referer': 'https://www.8090g.cn/',
-        'Origin': 'https://www.8090g.cn',
-        'Cache-Control': 'no-cache'
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'iframe',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site'
     }
 
     PARSE_APIS = [
-        "https://www.8090g.cn/?url=",             # 默认线路 - 无广告高速
-        "https://jx.jsonplayer.com/player/?url=",  # 备用线路1 - 稳定无广告
-        "https://jx.xmflv.com/?url=",             # 备用线路2 - 超清无广告
+        "https://jx.jsonplayer.com/player/?url=",  # 默认线路 - 稳定无广告
+        "https://jx.xmflv.com/?url=",              # 备用线路1 - 超清无广告
+        "https://jx.xyflv.cc/?url=",               # 备用线路2 - 稳定高速
+        "https://jx.m3u8.tv/jiexi/?url=",         # 备用线路3 - 稳定高清
+        "https://www.ckmov.vip/api.php?url=",     # 备用线路4 - 全网解析
+        "https://www.pangujiexi.cc/jiexi.php?url=" # 备用线路5 - 备用高清
     ]
 
     SUPPORTED_DOMAINS = [
@@ -70,20 +79,24 @@ class VideoParser:
                     response = session.get(
                         parse_url,
                         headers=self.HEADERS,
-                        timeout=10,  # 增加超时时间
+                        timeout=15,  # 增加超时时间
                         allow_redirects=True
                     )
                     if response.status_code == 200:
                         logger.info(f"解析成功: {parse_url}")
                         return parse_url
+                    elif response.status_code in [403, 404]:
+                        logger.warning(f"接口访问受限或不存在: {parse_url}")
+                        break  # 直接尝试下一个接口
+                    else:
+                        logger.warning(f"请求返回状态码: {response.status_code}")
                 except requests.RequestException as e:
                     logger.warning(f"第{attempt + 1}次请求失败: {str(e)}")
-                    if attempt < 2:  # 最后一次失败不需要等待
-                        import time
-                        time.sleep(1)  # 请求失败后等待1秒再重试
+                    if attempt < 2:
+                        time.sleep(2)  # 增加重试等待时间
                     continue
             
-            logger.error(f"所有请求尝试均失败: {api}")
+            logger.error(f"接口请求失败: {api}")
             return None
             
         except Exception as e:
@@ -131,9 +144,12 @@ def create_app():
     # 配置CORS
     CORS(app, resources={
         r"/*": {
-            "origins": Config.CORS_ORIGINS,
+            "origins": ["*"],
             "methods": ["GET", "POST", "OPTIONS"],
-            "allow_headers": ["Content-Type"]
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "expose_headers": ["Content-Type"],
+            "supports_credentials": True,
+            "max_age": 600
         }
     })
     
@@ -141,11 +157,25 @@ def create_app():
     @app.route('/')
     def index():
         response = make_response(render_template('index.html'))
-        response.headers['Cache-Control'] = Config.CACHE_CONTROL
+        response.headers.update({
+            'Cache-Control': Config.CACHE_CONTROL,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+        })
         return response
 
-    @app.route('/parse', methods=['POST'])
+    @app.route('/parse', methods=['POST', 'OPTIONS'])
     def parse():
+        if request.method == 'OPTIONS':
+            response = make_response()
+            response.headers.update({
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+            })
+            return response
+
         try:
             url = request.form.get('url', '').strip()
             api_index = int(request.form.get('api_index', 0))
@@ -160,8 +190,14 @@ def create_app():
             if api_index >= len(parser.PARSE_APIS):
                 return jsonify({'success': False, 'message': '无效的接口选择'})
 
-            response = make_response(jsonify(parser.parse_url(url, api_index)))
-            response.headers['Cache-Control'] = Config.CACHE_CONTROL
+            result = parser.parse_url(url, api_index)
+            response = make_response(jsonify(result))
+            response.headers.update({
+                'Cache-Control': Config.CACHE_CONTROL,
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
+            })
             return response
             
         except Exception as e:
