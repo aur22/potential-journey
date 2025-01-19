@@ -2,19 +2,23 @@
     "version": 2,
     "builds": [
         {
-            "src": "video_parser.py",
+            "src": "wsgi.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
+            "src": "/static/(.*)",
+            "dest": "/static/$1"
+        },
+        {
             "src": "/(.*)",
-            "dest": "video_parser.py"
+            "dest": "wsgi.py"
         }
     ],
     "env": {
         "PYTHONUNBUFFERED": "1",
         "FLASK_ENV": "production",
-        "FLASK_APP": "video_parser.py"
+        "FLASK_APP": "wsgi.py"
     }
 } 
