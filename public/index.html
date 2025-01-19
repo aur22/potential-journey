@@ -186,12 +186,19 @@
                 if (data.url) {
                     videoContainer.style.display = 'block';
                     const videoUrl = data.url;
-                    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                    const platform = data.platform;
+                    
+                    if (platform === 'youtube') {
                         // YouTube视频使用iframe
-                        videoContainer.innerHTML = `<iframe src="${videoUrl}" allowfullscreen></iframe>`;
+                        videoContainer.innerHTML = `<iframe src="${videoUrl}" allowfullscreen style="width:100%; height:500px; border:none;"></iframe>`;
                     } else {
                         // 其他视频使用video标签
-                        videoContainer.innerHTML = `<video src="${videoUrl}" controls style="width:100%; max-height:500px;"></video>`;
+                        videoContainer.innerHTML = `
+                            <h3 style="margin-bottom: 10px;">${data.title || ''}</h3>
+                            <video src="${videoUrl}" controls style="width:100%; max-height:500px; background:#000;">
+                                您的浏览器不支持 HTML5 视频播放
+                            </video>
+                        `;
                     }
                 } else {
                     alert(data.error || '解析失败，请稍后重试');
