@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, make_response, send_from_directory
 from flask_cors import CORS
 import logging
 from logging.handlers import RotatingFileHandler
-import yt_dlp
+import requests
 import re
 
 # 配置日志
@@ -14,6 +14,27 @@ handler.setFormatter(logging.Formatter(
     '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
 ))
 logger.addHandler(handler)
+
+# 解析接口列表
+PARSE_APIS = [
+    'https://jx.m3u8.tv/jiexi/?url=',  # 默认线路 - 稳定高清
+    'https://www.8090g.cn/?url=',  # 备用线路1 - 无广告
+    'https://jx.playerjy.com/?url=',  # 备用线路2 - 超清解析
+    'https://jx.jsonplayer.com/player/?url=',  # 备用线路3 - 全网解析
+    'https://jx.xmflv.com/?url=',  # 备用线路4 - 超清解析
+    'https://api.jiexi.la/?url='  # 备用线路5 - 稳定高速
+]
+
+# 支持的视频平台
+SUPPORTED_DOMAINS = [
+    'v.qq.com',
+    'iqiyi.com',
+    'youku.com',
+    'mgtv.com',
+    'bilibili.com',
+    'douyin.com',
+    'kuaishou.com'
+]
 
 class Config:
     """应用配置类"""
@@ -59,63 +80,16 @@ def create_app():
             if not is_valid_url(url):
                 return jsonify({'error': '不支持的视频平台或无效的URL'}), 400
 
-            # 配置yt-dlp选项
-            ydl_opts = {
-                'format': 'best[ext=mp4]/best',  # 优先选择mp4格式
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': False,
-                'socket_timeout': 30,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                }
-            }
-            
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # 获取视频信息
-                    info = ydl.extract_info(url, download=False)
-                    if not info:
-                        return jsonify({'error': '无法获取视频信息'}), 400
-
-                    # 处理YouTube视频
-                    if 'youtube.com' in url or 'youtu.be' in url:
-                        if 'url' in info:
-                            video_url = info['url']
-                        else:
-                            # 获取最佳格式
-                            formats = info.get('formats', [])
-                            if not formats:
-                                return jsonify({'error': '无法获取视频格式'}), 400
-                            
-                            # 选择最佳的mp4格式
-                            mp4_formats = [f for f in formats if f.get('ext') == 'mp4']
-                            if mp4_formats:
-                                best_format = max(mp4_formats, key=lambda f: f.get('filesize', 0))
-                            else:
-                                best_format = formats[-1]
-                            
-                            video_url = best_format.get('url')
-                            if not video_url:
-                                return jsonify({'error': '无法获取视频地址'}), 400
+            # 尝试使用不同的解析接口
+            for api in PARSE_APIS:
+                try:
+                    parse_url = api + url
+                    logger.info(f"尝试使用接口: {api}")
                     
-                    # 处理其他平台视频
-                    else:
-                        video_url = info.get('url')
-                        if not video_url:
-                            formats = info.get('formats', [])
-                            if formats:
-                                best_format = formats[-1]
-                                video_url = best_format.get('url')
-                            
-                            if not video_url:
-                                return jsonify({'error': '无法获取视频地址'}), 400
-
-                    # 返回成功响应
+                    # 返回解析结果
                     response = jsonify({
-                        'url': video_url,
-                        'title': info.get('title', ''),
-                        'platform': 'youtube' if ('youtube.com' in url or 'youtu.be' in url) else 'other'
+                        'url': parse_url,
+                        'title': '视频播放'
                     })
                     
                     response.headers.update({
@@ -126,9 +100,11 @@ def create_app():
                     })
                     return response
                     
-            except yt_dlp.utils.DownloadError as e:
-                logger.error(f"下载错误: {str(e)}")
-                return jsonify({'error': '视频解析失败，请确认链接是否正确'}), 400
+                except Exception as e:
+                    logger.error(f"解析接口 {api} 失败: {str(e)}")
+                    continue
+            
+            return jsonify({'error': '视频解析失败，请稍后重试'}), 400
                 
         except Exception as e:
             logger.error(f"解析错误: {str(e)}")
@@ -146,13 +122,7 @@ def create_app():
 
 def is_valid_url(url):
     """检查URL是否为支持的视频平台"""
-    patterns = [
-        r'^https?:\/\/(www\.)?(youtube\.com|youtu\.be)',
-        r'^https?:\/\/(www\.)?bilibili\.com',
-        r'^https?:\/\/(www\.)?douyin\.com',
-        r'^https?:\/\/(www\.)?kuaishou\.com'
-    ]
-    return any(re.match(pattern, url) for pattern in patterns)
+    return any(domain in url.lower() for domain in SUPPORTED_DOMAINS)
 
 if __name__ == '__main__':
     app = create_app()
