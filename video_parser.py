@@ -32,25 +32,21 @@ class VideoParser:
     """视频解析器类"""
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept': '*/*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Encoding': 'gzip, deflate',
         'Connection': 'keep-alive',
         'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'iframe',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'cross-site'
+        'Pragma': 'no-cache'
     }
 
     PARSE_APIS = [
-        "https://jx.jsonplayer.com/player/?url=",  # 默认线路 - 稳定无广告
-        "https://jx.xmflv.com/?url=",              # 备用线路1 - 超清无广告
-        "https://jx.xyflv.cc/?url=",               # 备用线路2 - 稳定高速
-        "https://jx.m3u8.tv/jiexi/?url=",         # 备用线路3 - 稳定高清
-        "https://www.ckmov.vip/api.php?url=",     # 备用线路4 - 全网解析
-        "https://www.pangujiexi.cc/jiexi.php?url=" # 备用线路5 - 备用高清
+        "https://jx.jsonplayer.com/player/?url=",  # 默认线路
+        "https://jx.xmflv.com/?url=",              # 备用线路1
+        "https://jx.aidouer.net/?url=",            # 备用线路2
+        "https://jx.playerjy.com/?url=",           # 备用线路3
+        "https://jx.quankan.app/?url=",            # 备用线路4
+        "https://jx.yparse.com/index.php?url=",    # 备用线路5
     ]
 
     SUPPORTED_DOMAINS = [
@@ -74,26 +70,37 @@ class VideoParser:
             session.verify = False
             session.trust_env = False
             
-            for attempt in range(3):  # 增加重试次数
+            for attempt in range(3):
                 try:
-                    response = session.get(
-                        parse_url,
-                        headers=self.HEADERS,
-                        timeout=15,  # 增加超时时间
-                        allow_redirects=True
-                    )
-                    if response.status_code == 200:
-                        logger.info(f"解析成功: {parse_url}")
-                        return parse_url
-                    elif response.status_code in [403, 404]:
-                        logger.warning(f"接口访问受限或不存在: {parse_url}")
-                        break  # 直接尝试下一个接口
-                    else:
-                        logger.warning(f"请求返回状态码: {response.status_code}")
+                    # 添加重试机制
+                    for retry in range(2):
+                        try:
+                            response = session.get(
+                                parse_url,
+                                headers=self.HEADERS,
+                                timeout=20,
+                                allow_redirects=True
+                            )
+                            if response.status_code == 200:
+                                logger.info(f"解析成功: {parse_url}")
+                                return parse_url
+                            elif response.status_code in [403, 404]:
+                                logger.warning(f"接口访问受限或不存在: {parse_url}")
+                                break
+                            else:
+                                logger.warning(f"请求返回状态码: {response.status_code}")
+                                if retry < 1:
+                                    time.sleep(1)
+                                    continue
+                        except requests.Timeout:
+                            if retry < 1:
+                                time.sleep(1)
+                                continue
+                            raise
                 except requests.RequestException as e:
                     logger.warning(f"第{attempt + 1}次请求失败: {str(e)}")
                     if attempt < 2:
-                        time.sleep(2)  # 增加重试等待时间
+                        time.sleep(2)
                     continue
             
             logger.error(f"接口请求失败: {api}")
@@ -112,23 +119,16 @@ class VideoParser:
             if not self.check_url(url):
                 return {'success': False, 'message': '不支持的视频网站，请输入正确的视频链接'}
 
-            # 尝试使用指定接口
-            result = self.request_parse(self.PARSE_APIS[api_index], url)
-            if result:
-                return {
-                    'success': True,
-                    'data': {'url': result, 'type': 'iframe'}
-                }
-
-            # 尝试其他接口
-            for i, api in enumerate(self.PARSE_APIS):
-                if i != api_index:
-                    result = self.request_parse(api, url)
-                    if result:
-                        return {
-                            'success': True,
-                            'data': {'url': result, 'type': 'iframe'}
-                        }
+            # 尝试所有接口
+            for i in range(len(self.PARSE_APIS)):
+                current_index = (api_index + i) % len(self.PARSE_APIS)
+                result = self.request_parse(self.PARSE_APIS[current_index], url)
+                if result:
+                    return {
+                        'success': True,
+                        'data': {'url': result, 'type': 'iframe'}
+                    }
+                time.sleep(1)  # 接口之间添加延迟
 
             return {'success': False, 'message': '解析失败，请稍后重试'}
             
