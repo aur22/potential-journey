@@ -2,23 +2,27 @@
     "version": 2,
     "builds": [
         {
-            "src": "wsgi.py",
+            "src": "index.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
-            "src": "/static/(.*)",
-            "dest": "/static/$1"
+            "src": "/",
+            "dest": "index.py"
         },
         {
-            "src": "/(.*)",
-            "dest": "wsgi.py"
+            "src": "/parse",
+            "dest": "index.py"
+        },
+        {
+            "src": "/static/(.*)",
+            "dest": "/static/$1"
         }
     ],
     "env": {
         "PYTHONUNBUFFERED": "1",
         "FLASK_ENV": "production",
-        "FLASK_APP": "wsgi.py"
+        "FLASK_APP": "index.py"
     }
 } 
